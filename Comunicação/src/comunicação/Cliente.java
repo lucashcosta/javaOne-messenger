@@ -2,6 +2,8 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
+
+// teste de mudança github
 package comunicação;
 
 /**
@@ -68,7 +70,7 @@ public class Cliente extends JFrame {
                 } catch (ClassNotFoundException cnfex) {
                     conversa.append("\nRecebido objeto de tipo desconhecido.");
                 }
-            } while (!recebido.equals("Servidor>>> FIM"));
+            } while (!recebido.equals("Servidor >>> FIM"));
             conversa.append("\nServidor encerrou a conexao.\n");
             saida.close();
             entrada.close();
