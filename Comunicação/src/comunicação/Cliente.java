@@ -55,7 +55,7 @@ public class Cliente extends JFrame {
     public void executaCliente() {
         try {
             conversa.setText("Tentando conectar.\n");
-            soquete = new Socket(InetAddress.getByName("177.105.51.203"), 5000);
+            soquete = new Socket(InetAddress.getByName("127.0.0.1"), 5000);
             conversa.append("Conectado a: " + soquete.getInetAddress().getHostName());
             saida = new ObjectOutputStream(soquete.getOutputStream());
             saida.flush();

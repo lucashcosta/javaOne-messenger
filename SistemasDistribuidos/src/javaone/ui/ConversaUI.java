@@ -5,12 +5,17 @@
  */
 package javaone.ui;
 
+import javaone.components.*;
+
 /**
  *
  * @author EvandroFBL
  */
 public class ConversaUI extends javax.swing.JFrame {
 
+    public static Server server;
+    public static Client client;
+    public static String message;
     /**
      * Creates new form ConversaUI
      */
@@ -58,6 +63,11 @@ public class ConversaUI extends javax.swing.JFrame {
         jScrollPane2.setViewportView(jTextAreaMensagem);
 
         jButtonEnviar.setText("Enviar");
+        jButtonEnviar.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButtonEnviarActionPerformed(evt);
+            }
+        });
 
         jMenu1.setText("Nome do programa");
         jMenuBar1.add(jMenu1);
@@ -102,6 +112,10 @@ public class ConversaUI extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
+    private void jButtonEnviarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonEnviarActionPerformed
+        message = jTextAreaMensagem.getText();
+    }//GEN-LAST:event_jButtonEnviarActionPerformed
+
     /**
      * @param args the command line arguments
      */
@@ -132,6 +146,11 @@ public class ConversaUI extends javax.swing.JFrame {
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
+                server = new Server();
+                client = new Client("127.0.0.1" , message);
+                if(server.fNewMessage){
+                    jTextAreaConvesa.append(server.receivedMessage);
+                }
                 new ConversaUI().setVisible(true);
             }
         });
@@ -146,7 +165,7 @@ public class ConversaUI extends javax.swing.JFrame {
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JSeparator jSeparator1;
-    private javax.swing.JTextArea jTextAreaConvesa;
+    private static javax.swing.JTextArea jTextAreaConvesa;
     private javax.swing.JTextArea jTextAreaMensagem;
     // End of variables declaration//GEN-END:variables
 }
