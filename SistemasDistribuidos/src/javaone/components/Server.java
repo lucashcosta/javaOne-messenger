@@ -9,6 +9,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import static java.lang.Thread.MIN_PRIORITY;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Scanner;
@@ -24,7 +25,7 @@ public class Server{
     
     public String receivedMessage;
     public ServerSocket serverSocket;
-    public Socket clientSocket;
+    public Socket clientSocket = null;
     public boolean fNewMessage;
     
     public Server(){
@@ -36,17 +37,19 @@ public class Server{
         try {
             //initialize server socket
             this.serverSocket = new ServerSocket(10007);
-            while(true){
+            if(this.clientSocket == null){
                 //listen for conection
-                this.clientSocket = this.serverSocket.accept();
-                
+                this.clientSocket = this.serverSocket.accept();            
+            }else{
+                JOptionPane.showMessageDialog(null, "Cliente ocupado", "Erro ao conectar", MIN_PRIORITY);
+            }   
                 //listen message
-                Scanner in = new Scanner(this.clientSocket.getInputStream());
-                this.receivedMessage = in.nextLine();
-                this.fNewMessage = true;
-            }
+                //Scanner in = new Scanner(this.clientSocket.getInputStream());
+                //this.receivedMessage = in.nextLine();
+                //this.fNewMessage = true;
+            
         } catch (IOException ex) {
-            Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
+            JOptionPane.showMessageDialog(null, ex, "erro", MIN_PRIORITY);
         }finally{
             this.fNewMessage = false;
         }

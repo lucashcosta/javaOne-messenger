@@ -33,8 +33,8 @@ public class Client{
             this.socket = new Socket(this.serverIp , 10007);
             
             //send message to server
-            PrintWriter out = new PrintWriter(this.socket.getOutputStream());
-            out.println(this.Message);
+            //PrintWriter out = new PrintWriter(this.socket.getOutputStream());
+            //out.println(this.Message);
         } catch (IOException ex) {
             Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
         }

@@ -101,7 +101,7 @@ public class ContatosUI extends javax.swing.JFrame {
 
     private void jButtonIniciarConversaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonIniciarConversaActionPerformed
         // TODO add your handling code here:
-        ConversaUI c = new ConversaUI("jao");
+        ConversaUIServidor c = new ConversaUIServidor("jao");
         c.setVisible(true);
     }//GEN-LAST:event_jButtonIniciarConversaActionPerformed
 
