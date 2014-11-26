@@ -5,27 +5,49 @@
  */
 package javaone.ui;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.EOFException;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
 import javaone.components.*;
 
 /**
  *
  * @author EvandroFBL
  */
-public class ConversaUI extends javax.swing.JFrame {
+public class ConversaUICliente extends javax.swing.JFrame {
 
-    public static Server server;
-    public static Client client;
-    public static String message;
+    public String receivedMessage;
+    public ServerSocket serverSocket;
+    public Socket clientSocket;
+    public ObjectOutputStream out;
+    public ObjectInputStream in;
+    public String serverName = "Joao";
+    public String clientName = "Maria";
     /**
      * Creates new form ConversaUI
      */
-    public ConversaUI() {
+    public ConversaUICliente() {        
         initComponents();
+        jTextFieldMensagem.addActionListener(
+                new ActionListener() {
+
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        sendData(e.getActionCommand());
+                    }
+                });
     }
     
-    public ConversaUI(String nome) {
+    public ConversaUICliente(String name) {
         initComponents();
-        jLabelNome.setText(nome);
+        jLabelNome.setText(name);
+        this.serverName = name;
     }
 
     /**
@@ -40,10 +62,10 @@ public class ConversaUI extends javax.swing.JFrame {
         jLabelNome = new javax.swing.JLabel();
         jSeparator1 = new javax.swing.JSeparator();
         jScrollPane1 = new javax.swing.JScrollPane();
-        jTextAreaConvesa = new javax.swing.JTextArea();
-        jScrollPane2 = new javax.swing.JScrollPane();
-        jTextAreaMensagem = new javax.swing.JTextArea();
+        jTextAreaConversa = new javax.swing.JTextArea();
         jButtonEnviar = new javax.swing.JButton();
+        jButtonAnexar = new javax.swing.JButton();
+        jTextFieldMensagem = new javax.swing.JTextField();
         jMenuBar1 = new javax.swing.JMenuBar();
         jMenu1 = new javax.swing.JMenu();
         jMenu2 = new javax.swing.JMenu();
@@ -53,14 +75,10 @@ public class ConversaUI extends javax.swing.JFrame {
         jLabelNome.setFont(new java.awt.Font("Tahoma", 0, 18)); // NOI18N
         jLabelNome.setText("Nome da pessoa");
 
-        jTextAreaConvesa.setEditable(false);
-        jTextAreaConvesa.setColumns(20);
-        jTextAreaConvesa.setRows(5);
-        jScrollPane1.setViewportView(jTextAreaConvesa);
-
-        jTextAreaMensagem.setColumns(20);
-        jTextAreaMensagem.setRows(5);
-        jScrollPane2.setViewportView(jTextAreaMensagem);
+        jTextAreaConversa.setEditable(false);
+        jTextAreaConversa.setColumns(20);
+        jTextAreaConversa.setRows(5);
+        jScrollPane1.setViewportView(jTextAreaConversa);
 
         jButtonEnviar.setText("Enviar");
         jButtonEnviar.addActionListener(new java.awt.event.ActionListener() {
@@ -68,6 +86,8 @@ public class ConversaUI extends javax.swing.JFrame {
                 jButtonEnviarActionPerformed(evt);
             }
         });
+
+        jButtonAnexar.setText("Anexar...");
 
         jMenu1.setText("Nome do programa");
         jMenuBar1.add(jMenu1);
@@ -88,9 +108,11 @@ public class ConversaUI extends javax.swing.JFrame {
                     .addComponent(jScrollPane1)
                     .addComponent(jLabelNome, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(layout.createSequentialGroup()
-                        .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 419, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(jTextFieldMensagem, javax.swing.GroupLayout.PREFERRED_SIZE, 419, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jButtonEnviar, javax.swing.GroupLayout.DEFAULT_SIZE, 86, Short.MAX_VALUE)))
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jButtonEnviar, javax.swing.GroupLayout.DEFAULT_SIZE, 86, Short.MAX_VALUE)
+                            .addComponent(jButtonAnexar, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
@@ -104,8 +126,11 @@ public class ConversaUI extends javax.swing.JFrame {
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 206, Short.MAX_VALUE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
-                    .addComponent(jButtonEnviar, javax.swing.GroupLayout.DEFAULT_SIZE, 75, Short.MAX_VALUE))
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(jButtonEnviar, javax.swing.GroupLayout.PREFERRED_SIZE, 39, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jButtonAnexar, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(jTextFieldMensagem))
                 .addContainerGap())
         );
 
@@ -113,9 +138,51 @@ public class ConversaUI extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void jButtonEnviarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonEnviarActionPerformed
-        message = jTextAreaMensagem.getText();
+        String message = jTextFieldMensagem.getText();
+        sendData(message);
+        jTextFieldMensagem.setText("");
     }//GEN-LAST:event_jButtonEnviarActionPerformed
 
+    public void executaCliente() {
+        try {
+            clientSocket = new Socket(InetAddress.getByName("127.0.0.1"), 5000);
+            out = new ObjectOutputStream(clientSocket.getOutputStream());
+            out.flush();
+            in = new ObjectInputStream(clientSocket.getInputStream());
+            jTextAreaConversa.append("Aguardando...\n");
+            out.writeObject(this.clientName + ">> Conexão Criada!");
+            out.flush();
+            do {
+                try {
+                    receivedMessage = (String) in.readObject();
+                    jTextAreaConversa.append(receivedMessage);
+                    jTextAreaConversa.setCaretPosition(jTextAreaConversa.getText().length());
+                } catch (ClassNotFoundException cnfex) {
+                    jTextAreaConversa.append("\nRecebido objeto e tipo desconhecido");
+                }
+            } while (!receivedMessage.equals("gertrudes"));
+
+            jTextAreaConversa.append("\nConexão Perdida");
+            out.close();
+            in.close();
+            clientSocket.close();
+        } catch (EOFException eof) {
+            jTextAreaConversa.append("\nConexão Perdida");
+        } catch (IOException io) {
+        }
+    }
+    
+    private void sendData(String s) {
+        try {
+            this.receivedMessage = s;
+            out.writeObject("\n" + this.clientName + ">> " + s);
+            out.flush();
+            jTextAreaConversa.append("\n" + this.clientName + ">> " + s);
+        }catch(IOException cnfex){
+            jTextAreaConversa.append("\nErro enviando objeto.");
+        }
+    }
+    
     /**
      * @param args the command line arguments
      */
@@ -133,39 +200,38 @@ public class ConversaUI extends javax.swing.JFrame {
                 }
             }
         } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(ConversaUI.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(ConversaUICliente.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(ConversaUI.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(ConversaUICliente.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(ConversaUI.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(ConversaUICliente.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(ConversaUI.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(ConversaUICliente.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
         //</editor-fold>
-
+        //</editor-fold>
+        //</editor-fold>
+        //</editor-fold>
+        final ConversaUICliente app =new ConversaUICliente();
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                server = new Server();
-                client = new Client("127.0.0.1" , message);
-                if(server.fNewMessage){
-                    jTextAreaConvesa.append(server.receivedMessage);
-                }
-                new ConversaUI().setVisible(true);
+                app.setVisible(true);
             }
         });
+        app.executaCliente();
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton jButtonAnexar;
     private javax.swing.JButton jButtonEnviar;
     private javax.swing.JLabel jLabelNome;
     private javax.swing.JMenu jMenu1;
     private javax.swing.JMenu jMenu2;
     private javax.swing.JMenuBar jMenuBar1;
     private javax.swing.JScrollPane jScrollPane1;
-    private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JSeparator jSeparator1;
-    private static javax.swing.JTextArea jTextAreaConvesa;
-    private javax.swing.JTextArea jTextAreaMensagem;
+    private javax.swing.JTextArea jTextAreaConversa;
+    private javax.swing.JTextField jTextFieldMensagem;
     // End of variables declaration//GEN-END:variables
 }

@@ -14,6 +14,7 @@ import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import javaone.components.*;
+import static javax.swing.JFrame.EXIT_ON_CLOSE;
 
 /**
  *
@@ -22,12 +23,13 @@ import javaone.components.*;
 public class ConversaUIServidor extends javax.swing.JFrame {
 
     public String message;
+    public String receivedMessage;
     public ServerSocket serverSocket;
     public Socket clientSocket;
-    public ObjectOutputStream out;
-    public ObjectInputStream in;
-    public String serverName;
-    public String clientName;
+    public ObjectOutputStream out = null;
+    public ObjectInputStream in = null;
+    public String serverName = "Joao";
+    public String clientName = "Maria";
     /**
      * Creates new form ConversaUI
      */
@@ -41,6 +43,7 @@ public class ConversaUIServidor extends javax.swing.JFrame {
                         sendData(e.getActionCommand());
                     }
                 });
+        //executaServidor();
     }
     
     public ConversaUIServidor(String name) {
@@ -139,29 +142,31 @@ public class ConversaUIServidor extends javax.swing.JFrame {
     private void jButtonEnviarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonEnviarActionPerformed
         message = jTextFieldMensagem.getText();
         sendData(message);
+        jTextFieldMensagem.setText("");
     }//GEN-LAST:event_jButtonEnviarActionPerformed
 
-    public void executaServidor() {
+    private void executaServidor() {
         try {
             serverSocket = new ServerSocket(5000, 100);
             while (true) {
+                jTextAreaConversa.append("Aguardando conexão!\n");
                 clientSocket = serverSocket.accept();
                 out = new ObjectOutputStream(clientSocket.getOutputStream());
                 out.flush();
                 in = new ObjectInputStream(clientSocket.getInputStream());
-                String recebido = this.serverName + ">> " + "Conexão Criada!";
-                out.writeObject(recebido);
+                this.receivedMessage = this.serverName + ">> " + "Conexão Criada!";
+                out.writeObject(receivedMessage);
                 out.flush();
 
                 do {
                     try {
-                        recebido = (String) in.readObject();
-                        jTextAreaConversa.append("\n" + recebido);
+                        receivedMessage = (String) in.readObject();
+                        jTextAreaConversa.append(receivedMessage);
                         jTextAreaConversa.setCaretPosition(jTextAreaConversa.getText().length());
                     } catch (ClassNotFoundException cnfex) {
                         jTextAreaConversa.append("\nRecebido objeto e tipo desconhecido");
                     }
-                } while (!recebido.equals("gertrudes"));
+                } while (!receivedMessage.equals("gertrudes"));
 
                 jTextAreaConversa.append("\nConexão Perdida");
                 out.close();
@@ -171,15 +176,15 @@ public class ConversaUIServidor extends javax.swing.JFrame {
         } catch (EOFException eof) {
             jTextAreaConversa.append("\nConexão Perdida");
         } catch (IOException io) {
-            io.printStackTrace();
+            jTextAreaConversa.append("\nConexão Perdida");
         }
     }
     
     private void sendData(String s) {
         try {
-            out.writeObject(this.serverName + ">> " + s);
+            out.writeObject("\n" + this.serverName + ">> " + s);
             out.flush();
-            jTextAreaConversa.append(this.serverName + ">> " + s);
+            jTextAreaConversa.append("\n" + this.serverName + ">> " + s);
         }catch(IOException cnfex){
             jTextAreaConversa.append("\nErro enviando objeto.");
         }
@@ -212,13 +217,17 @@ public class ConversaUIServidor extends javax.swing.JFrame {
         }
         //</editor-fold>
         //</editor-fold>
-
+        final ConversaUIServidor app = new ConversaUIServidor();
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
+            @Override
             public void run() {
-                new ConversaUIServidor().setVisible(true);
+                //ConversaUIServidor app = new ConversaUIServidor();
+                app.setVisible(true);
+                //app.executaServidor();
             }
         });
+        app.executaServidor();
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables

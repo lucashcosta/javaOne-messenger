@@ -22,14 +22,19 @@ public class Servidor extends JFrame {
 
     private final JTextField mensagem;
     private final JTextArea conversa;
+    //private final JButton envia;
+    //private final JButton anexa;
+    //private final JLabel nome;
     public ServerSocket soqueteServidor;
     public Socket soquete;
     public ObjectOutputStream saida;
     public ObjectInputStream entrada;
 
-    public Servidor() {
+    public Servidor(String nome) {
         super("Servidor");
         Container c = getContentPane();
+        //envia = new JButton();
+        //anexa = new JButton();
         mensagem = new JTextField();
         mensagem.setEnabled(false);
         mensagem.addActionListener(
@@ -40,10 +45,15 @@ public class Servidor extends JFrame {
                         enviaDados(e.getActionCommand());
                     }
                 });
-        c.add(mensagem, BorderLayout.NORTH);
+        c.add(mensagem, BorderLayout.SOUTH);
         conversa = new JTextArea();
         conversa.setEditable(false);
         c.add(new JScrollPane(conversa), BorderLayout.CENTER);
+        //this.nome = new JLabel();
+        //this.nome.setText(nome);
+        //c.add(this.nome);
+        //c.add(envia);
+        //c.add(anexa);
         setSize(300, 350);
         setLocation(100, 100);
         this.setVisible(true);
@@ -105,7 +115,7 @@ public class Servidor extends JFrame {
     }
 
     public static void main(String args[]) {
-        Servidor app = new Servidor();
+        Servidor app = new Servidor("jao");
         app.setDefaultCloseOperation(EXIT_ON_CLOSE);
         app.executaServidor();
     }
