@@ -5,6 +5,20 @@
  */
 package javaone.ui;
 
+import javaone.components.*;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.security.NoSuchAlgorithmException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+
 /**
  *
  * @author EvandroFBL
@@ -14,8 +28,123 @@ public class ContatosUI extends javax.swing.JFrame {
     /**
      * Creates new form ContatosUI
      */
+    private SecretKey secretKey;
+    private KeyGenerator keyGen;
+    private Users ownUser;
+    private Core core;
+    
     public ContatosUI() {
         initComponents();
+        try {
+            keyGen = KeyGenerator.getInstance("DES");
+            secretKey = keyGen.generateKey();
+        } catch (NoSuchAlgorithmException ex) {
+            Logger.getLogger(ContatosUI.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+    //função que vai inicializar o servidor primario
+    public void executeRequestListener(){ 
+        try {
+            ServerSocket serverSocket = new ServerSocket(6000, 100);
+            while (true){
+                Socket clientSocket = serverSocket.accept();
+                ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
+                out.flush();
+                ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
+                String control;
+                Users usr = new Users();
+                SecretKey sKey;
+                try{
+                    control = (String) in.readObject();
+                    if (control.equals("1")){
+                        //abrir conversa
+                        out.writeObject("1.1");
+                        out.flush();
+                        try{
+                            usr = (Users) in.readObject();
+                            out.writeObject("1.2");
+                            out.flush();
+                            try {
+                                sKey = (SecretKey) in.readObject();
+                                out.writeObject("1.3");
+                                out.flush();
+                                ConversaUIServidor c = new ConversaUIServidor(usr.nome, sKey);
+                                //retornar mensagem de controle confirmando
+                                out.writeObject("1.4");
+                                out.flush();
+                                c.setVisible(true);
+                            }catch (IOException | ClassNotFoundException e){
+                                //colocar erro
+                            }
+                        }catch (IOException | ClassNotFoundException e){
+                            //colocar erro
+                        }
+                    }else{
+                        //retorna erro - talves nem seja necessário
+                        out.writeObject("mensagem de controle incorreta!");
+                        out.flush();
+                    }
+                }catch (IOException | ClassNotFoundException e){
+                    
+                }
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(ContatosUI.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+    //funçao que vai receber um ip e realizar um pedido de conversa
+    public void makeConversationRequest(String ip, SecretKey sctKey){
+        try {
+            Socket clientSocket = new Socket(InetAddress.getByName(ip), 6000);
+            ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
+            out.flush();
+            ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
+            String control;
+            out.writeObject("1");
+            out.flush();
+            try{
+                control = (String)in.readObject();
+                if (control.equals("1.1")){
+                    out.writeObject(this.getOwnUser());
+                    out.flush();
+                    try{
+                        control = (String)in.readObject();
+                        if (control.equals("1.2")){
+                            out.writeObject(sctKey);
+                            out.flush();
+                            try{
+                                control = (String)in.readObject();
+                                if (control.equals("1.3")){
+                                    //retornar algum feedback para o usuário talves?
+                                    try{
+                                        control = (String)in.readObject();
+                                        if(control.equals("1.4")){
+                                            //o outro usuario esta pronto, basta iniciar a interface para conversa
+                                            ConversaUICliente c = new ConversaUICliente(this.getOwnUser().nome, sctKey);
+                                            c.setVisible(true);
+                                        }
+                                    }catch(IOException | ClassNotFoundException e){
+                                        //colocar erro
+                                    }
+                                }
+                            }catch(IOException | ClassNotFoundException e){
+                                //colocar erro
+                            }
+                        }
+                    }catch(IOException | ClassNotFoundException e){
+                        //colocar erro
+                    }
+                }
+            }catch(IOException | ClassNotFoundException e){
+                //colocar erro
+            }
+        } catch (UnknownHostException ex) {
+            Logger.getLogger(ContatosUI.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(ContatosUI.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     /**
@@ -60,7 +189,7 @@ public class ContatosUI extends javax.swing.JFrame {
         jListContatos.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
         jScrollPane2.setViewportView(jListContatos);
 
-        jMenu1.setText("Nome do programa");
+        jMenu1.setText("Sistema Mensageiro");
         jMenuBar1.add(jMenu1);
 
         jMenu2.setText("Opções");
@@ -101,7 +230,7 @@ public class ContatosUI extends javax.swing.JFrame {
 
     private void jButtonIniciarConversaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonIniciarConversaActionPerformed
         // TODO add your handling code here:
-        ConversaUIServidor c = new ConversaUIServidor("jao");
+        ConversaUIServidor c = new ConversaUIServidor();
         c.setVisible(true);
     }//GEN-LAST:event_jButtonIniciarConversaActionPerformed
 
@@ -152,4 +281,8 @@ public class ContatosUI extends javax.swing.JFrame {
     private javax.swing.JSeparator jSeparator2;
     private javax.swing.JSplitPane jSplitPane1;
     // End of variables declaration//GEN-END:variables
+
+    public Users getOwnUser() {
+        return this.ownUser;
+    }
 }

@@ -13,8 +13,18 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import javaone.components.*;
-import static javax.swing.JFrame.EXIT_ON_CLOSE;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import sun.misc.BASE64Decoder;
+import sun.misc.BASE64Encoder;
 
 /**
  *
@@ -24,12 +34,14 @@ public class ConversaUIServidor extends javax.swing.JFrame {
 
     public String message;
     public String receivedMessage;
+    public String encryptedMessage;
     public ServerSocket serverSocket;
     public Socket clientSocket;
     public ObjectOutputStream out = null;
     public ObjectInputStream in = null;
     public String serverName = "Joao";
     public String clientName = "Maria";
+    public SecretKey secretkey;
     /**
      * Creates new form ConversaUI
      */
@@ -46,10 +58,11 @@ public class ConversaUIServidor extends javax.swing.JFrame {
         //executaServidor();
     }
     
-    public ConversaUIServidor(String name) {
+    public ConversaUIServidor(String name, SecretKey sctKey) {
         initComponents();
         jLabelNome.setText(name);
-        this.serverName = name;
+        this.clientName = name;
+        this.secretkey = sctKey;
     }
 
     /**
@@ -91,7 +104,7 @@ public class ConversaUIServidor extends javax.swing.JFrame {
 
         jButtonAnexar.setText("Anexar...");
 
-        jMenu1.setText("Nome do programa");
+        jMenu1.setText("Sistema Mensageiro");
         jMenuBar1.add(jMenu1);
 
         jMenu2.setText("Opções");
@@ -145,7 +158,7 @@ public class ConversaUIServidor extends javax.swing.JFrame {
         jTextFieldMensagem.setText("");
     }//GEN-LAST:event_jButtonEnviarActionPerformed
 
-    private void executaServidor() {
+    private void executeServer() {
         try {
             serverSocket = new ServerSocket(5000, 100);
             while (true) {
@@ -160,7 +173,9 @@ public class ConversaUIServidor extends javax.swing.JFrame {
 
                 do {
                     try {
-                        receivedMessage = (String) in.readObject();
+                        //receivedMessage = (String) in.readObject();
+                        encryptedMessage = (String) in.readObject();
+                        receivedMessage = decrypt(encryptedMessage, this.secretkey);
                         jTextAreaConversa.append(receivedMessage);
                         jTextAreaConversa.setCaretPosition(jTextAreaConversa.getText().length());
                     } catch (ClassNotFoundException cnfex) {
@@ -188,6 +203,74 @@ public class ConversaUIServidor extends javax.swing.JFrame {
         }catch(IOException cnfex){
             jTextAreaConversa.append("\nErro enviando objeto.");
         }
+    }
+    
+    private String encrypt(String data, SecretKey secretKey){
+	try{		
+            Cipher desCipher = Cipher.getInstance("SistemasDistribuidos/CBC/PKCS5Padding"); /* Must specify the mode explicitly as most JCE providers default to ECB mode!! */
+            desCipher.init(Cipher.ENCRYPT_MODE,secretKey);
+
+            //Encrypt Data
+            byte[] byteDataToEncrypt = data.getBytes();
+            byte[] byteCipherText = desCipher.doFinal(byteDataToEncrypt); 
+            String strCipherText = new BASE64Encoder().encode(byteCipherText);
+            return strCipherText;
+        }catch (NoSuchAlgorithmException noSuchAlgo){
+            System.out.println(" No Such Algorithm exists " + noSuchAlgo);
+        }
+            catch (NoSuchPaddingException noSuchPad){
+            System.out.println(" No Such Padding exists " + noSuchPad);
+        }
+            catch (InvalidKeyException invalidKey){
+                System.out.println(" Invalid Key " + invalidKey);
+            }
+
+            catch (BadPaddingException badPadding){
+                System.out.println(" Bad Padding " + badPadding);
+            }
+
+            catch (IllegalBlockSizeException illegalBlockSize){
+                System.out.println(" Illegal Block Size " + illegalBlockSize);
+            }
+        return null;
+    }
+
+    private String decrypt(String data, SecretKey secretKey){
+	try{		
+		Cipher desCipher = Cipher.getInstance("DES/CBC/PKCS5Padding"); /* Must specify the mode explicitly as most JCE providers default to ECB mode!! */		
+		desCipher.init(Cipher.DECRYPT_MODE,secretKey,desCipher.getParameters());
+		//desCipher.init(Cipher.DECRYPT_MODE,secretKey);
+
+		//Decrypt Data
+                byte[] byteCipherText = new BASE64Decoder().decodeBuffer(data);
+		byte[] byteDecryptedText = desCipher.doFinal(byteCipherText);
+		String strDecryptedText = new String(byteDecryptedText);
+		return strDecryptedText;
+        }catch (NoSuchAlgorithmException noSuchAlgo){
+                System.out.println(" No Such Algorithm exists " + noSuchAlgo);
+        }
+            catch (NoSuchPaddingException noSuchPad){
+                System.out.println(" No Such Padding exists " + noSuchPad);
+            }
+
+                catch (InvalidKeyException invalidKey){
+                    System.out.println(" Invalid Key " + invalidKey);
+                }
+
+                catch (BadPaddingException badPadding){
+                    System.out.println(" Bad Padding " + badPadding);
+                }
+
+                catch (IllegalBlockSizeException illegalBlockSize){
+                    System.out.println(" Illegal Block Size " + illegalBlockSize);
+                }
+
+                catch (InvalidAlgorithmParameterException invalidParam){
+                    System.out.println(" Invalid Parameter " + invalidParam);
+                } catch (IOException ex) {
+                    Logger.getLogger(ConversaUIServidor.class.getName()).log(Level.SEVERE, null, ex);
+                }
+        return null;
     }
     
     /**
@@ -224,10 +307,10 @@ public class ConversaUIServidor extends javax.swing.JFrame {
             public void run() {
                 //ConversaUIServidor app = new ConversaUIServidor();
                 app.setVisible(true);
-                //app.executaServidor();
+                //app.executeServer();
             }
         });
-        app.executaServidor();
+        app.executeServer();
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables

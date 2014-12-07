@@ -5,6 +5,8 @@
  */
 package javaone.components;
 
+import java.awt.List;
+
 /**
  *
  * @author EvandroFBL
@@ -18,5 +20,6 @@ package javaone.components;
 */
 public class Core {
    
+    List online;
     
 }

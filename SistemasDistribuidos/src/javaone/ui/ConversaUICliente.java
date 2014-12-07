@@ -12,9 +12,19 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.InetAddress;
-import java.net.ServerSocket;
 import java.net.Socket;
-import javaone.components.*;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import sun.misc.BASE64Decoder;
+import sun.misc.BASE64Encoder;
 
 /**
  *
@@ -23,12 +33,14 @@ import javaone.components.*;
 public class ConversaUICliente extends javax.swing.JFrame {
 
     public String receivedMessage;
-    public ServerSocket serverSocket;
+    public String encryptedMessage;
+    //public ServerSocket serverSocket;
     public Socket clientSocket;
     public ObjectOutputStream out;
     public ObjectInputStream in;
     public String serverName = "Joao";
     public String clientName = "Maria";
+    public SecretKey secretkey;
     /**
      * Creates new form ConversaUI
      */
@@ -44,10 +56,11 @@ public class ConversaUICliente extends javax.swing.JFrame {
                 });
     }
     
-    public ConversaUICliente(String name) {
+    public ConversaUICliente(String name, SecretKey sctKey) {
         initComponents();
         jLabelNome.setText(name);
         this.serverName = name;
+        this.secretkey = sctKey;
     }
 
     /**
@@ -143,7 +156,7 @@ public class ConversaUICliente extends javax.swing.JFrame {
         jTextFieldMensagem.setText("");
     }//GEN-LAST:event_jButtonEnviarActionPerformed
 
-    public void executaCliente() {
+    public void executeClient() {
         try {
             clientSocket = new Socket(InetAddress.getByName("127.0.0.1"), 5000);
             out = new ObjectOutputStream(clientSocket.getOutputStream());
@@ -154,7 +167,8 @@ public class ConversaUICliente extends javax.swing.JFrame {
             out.flush();
             do {
                 try {
-                    receivedMessage = (String) in.readObject();
+                    encryptedMessage = (String) in.readObject();
+                    receivedMessage = decrypt(encryptedMessage, this.secretkey);
                     jTextAreaConversa.append(receivedMessage);
                     jTextAreaConversa.setCaretPosition(jTextAreaConversa.getText().length());
                 } catch (ClassNotFoundException cnfex) {
@@ -181,6 +195,74 @@ public class ConversaUICliente extends javax.swing.JFrame {
         }catch(IOException cnfex){
             jTextAreaConversa.append("\nErro enviando objeto.");
         }
+    }
+    
+    private String encrypt(String data, SecretKey secretKey){
+	try{		
+            Cipher desCipher = Cipher.getInstance("SistemasDistribuidos/CBC/PKCS5Padding"); /* Must specify the mode explicitly as most JCE providers default to ECB mode!! */
+            desCipher.init(Cipher.ENCRYPT_MODE,secretKey);
+
+            //Encrypt Data
+            byte[] byteDataToEncrypt = data.getBytes();
+            byte[] byteCipherText = desCipher.doFinal(byteDataToEncrypt); 
+            String strCipherText = new BASE64Encoder().encode(byteCipherText);
+            return strCipherText;
+        }catch (NoSuchAlgorithmException noSuchAlgo){
+            System.out.println(" No Such Algorithm exists " + noSuchAlgo);
+        }
+            catch (NoSuchPaddingException noSuchPad){
+            System.out.println(" No Such Padding exists " + noSuchPad);
+        }
+            catch (InvalidKeyException invalidKey){
+                System.out.println(" Invalid Key " + invalidKey);
+            }
+
+            catch (BadPaddingException badPadding){
+                System.out.println(" Bad Padding " + badPadding);
+            }
+
+            catch (IllegalBlockSizeException illegalBlockSize){
+                System.out.println(" Illegal Block Size " + illegalBlockSize);
+            }
+        return null;
+    }
+
+    private String decrypt(String data, SecretKey secretKey){
+	try{		
+		Cipher desCipher = Cipher.getInstance("DES/CBC/PKCS5Padding"); /* Must specify the mode explicitly as most JCE providers default to ECB mode!! */		
+		desCipher.init(Cipher.DECRYPT_MODE,secretKey,desCipher.getParameters());
+		//desCipher.init(Cipher.DECRYPT_MODE,secretKey);
+
+		//Decrypt Data
+                byte[] byteCipherText = new BASE64Decoder().decodeBuffer(data);
+		byte[] byteDecryptedText = desCipher.doFinal(byteCipherText);
+		String strDecryptedText = new String(byteDecryptedText);
+		return strDecryptedText;
+        }catch (NoSuchAlgorithmException noSuchAlgo){
+                System.out.println(" No Such Algorithm exists " + noSuchAlgo);
+        }
+            catch (NoSuchPaddingException noSuchPad){
+                System.out.println(" No Such Padding exists " + noSuchPad);
+            }
+
+                catch (InvalidKeyException invalidKey){
+                    System.out.println(" Invalid Key " + invalidKey);
+                }
+
+                catch (BadPaddingException badPadding){
+                    System.out.println(" Bad Padding " + badPadding);
+                }
+
+                catch (IllegalBlockSizeException illegalBlockSize){
+                    System.out.println(" Illegal Block Size " + illegalBlockSize);
+                }
+
+                catch (InvalidAlgorithmParameterException invalidParam){
+                    System.out.println(" Invalid Parameter " + invalidParam);
+                } catch (IOException ex) {
+                    Logger.getLogger(ConversaUIServidor.class.getName()).log(Level.SEVERE, null, ex);
+                }
+        return null;
     }
     
     /**
@@ -219,7 +301,7 @@ public class ConversaUICliente extends javax.swing.JFrame {
                 app.setVisible(true);
             }
         });
-        app.executaCliente();
+        app.executeClient();
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
