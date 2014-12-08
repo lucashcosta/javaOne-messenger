@@ -262,27 +262,17 @@ public class ContatosUI extends javax.swing.JFrame {
     private void jButtonIniciarConversaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonIniciarConversaActionPerformed
         // TODO add your handling code here:
         int index = jListContatos.getSelectedIndex();
-
-        int size = listModel.getSize();
-
-        if (size == 0) { //Nobody's left, disable firing.
-            jButtonIniciarConversa.setEnabled(false);
-
-        } else { //Select an index.
-            if (index == listModel.getSize()) {
-                ArrayList<Users> list;
-                list = core.getList();
-                String ip = list.get(index).ip;
-                if (!ip.equals(this.ownInet)){
-                    makeConversationRequest(ip, this.secretKey);
-                }else{
-                    //retornar mensagem de erro avisando q está tentando conversas com ele propio
-                }
-            }
-
-            jListContatos.setSelectedIndex(index);
-            jListContatos.ensureIndexIsVisible(index);
+        ArrayList<Users> list;
+        list = core.getList();
+        String ip = list.get(index).ip;
+        if (!ip.equals(this.ownInet)){
+            makeConversationRequest(ip, this.secretKey);
+        }else{
+            //retornar mensagem de erro avisando q está tentando conversas com ele propio
         }
+
+        jListContatos.setSelectedIndex(index);
+        jListContatos.ensureIndexIsVisible(index);
     }//GEN-LAST:event_jButtonIniciarConversaActionPerformed
 
     private void jListContatosValueChanged(javax.swing.event.ListSelectionEvent evt) {//GEN-FIRST:event_jListContatosValueChanged
@@ -326,6 +316,7 @@ public class ContatosUI extends javax.swing.JFrame {
         final ContatosUI app = new ContatosUI();
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
+            @Override
             public void run() {
                 app.setVisible(true);
             }
