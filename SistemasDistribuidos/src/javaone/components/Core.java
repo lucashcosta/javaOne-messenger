@@ -6,6 +6,7 @@
 package javaone.components;
 
 import java.awt.List;
+import java.util.ArrayList;
 
 /**
  *
@@ -20,6 +21,15 @@ import java.awt.List;
 */
 public class Core {
    
-    List online;
+    private ArrayList<Users> online;
     
+    public Core(){
+        online = new ArrayList<Users>();
+        online.add(new Users("João", "192.168.0.100"));
+        online.add(new Users("Maria", "192.168.0.107"));
+    }
+    
+    public ArrayList getList(){
+        return this.online;
+    }
 }

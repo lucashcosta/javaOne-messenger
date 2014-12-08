@@ -9,15 +9,18 @@ import javaone.components.*;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
+import javax.swing.DefaultListModel;
 
 /**
  *
@@ -31,7 +34,9 @@ public class ContatosUI extends javax.swing.JFrame {
     private SecretKey secretKey;
     private KeyGenerator keyGen;
     private Users ownUser;
+    private String ownInet;
     private Core core;
+    private DefaultListModel listModel;
     
     public ContatosUI() {
         initComponents();
@@ -41,6 +46,14 @@ public class ContatosUI extends javax.swing.JFrame {
         } catch (NoSuchAlgorithmException ex) {
             Logger.getLogger(ContatosUI.class.getName()).log(Level.SEVERE, null, ex);
         }
+        core = new Core();
+        initiateListOfContacts();
+        try {
+            this.ownInet = Inet4Address.getLocalHost().getHostAddress();
+        } catch (UnknownHostException ex) {
+            Logger.getLogger(ContatosUI.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
     }
     
     //função que vai inicializar o servidor primario
@@ -53,7 +66,7 @@ public class ContatosUI extends javax.swing.JFrame {
                 out.flush();
                 ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
                 String control;
-                Users usr = new Users();
+                Users usr;
                 SecretKey sKey;
                 try{
                     control = (String) in.readObject();
@@ -146,6 +159,18 @@ public class ContatosUI extends javax.swing.JFrame {
             Logger.getLogger(ContatosUI.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
+    
+    private void initiateListOfContacts(){
+        listModel = new DefaultListModel();
+        int index = 0;
+        ArrayList<Users> list;
+        list = core.getList();
+        for (Users usr : list){
+            listModel.add(index, usr.nome);
+            index++;
+        }
+        jListContatos.setModel(listModel);
+    }
 
     /**
      * This method is called from within the constructor to initialize the form.
@@ -173,6 +198,7 @@ public class ContatosUI extends javax.swing.JFrame {
         jLabelContatosDisponiveis.setText("Contatos Disponíveis");
 
         jButtonIniciarConversa.setText("Iniciar Conversa");
+        jButtonIniciarConversa.setEnabled(false);
         jButtonIniciarConversa.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButtonIniciarConversaActionPerformed(evt);
@@ -187,6 +213,11 @@ public class ContatosUI extends javax.swing.JFrame {
             public Object getElementAt(int i) { return strings[i]; }
         });
         jListContatos.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        jListContatos.addListSelectionListener(new javax.swing.event.ListSelectionListener() {
+            public void valueChanged(javax.swing.event.ListSelectionEvent evt) {
+                jListContatosValueChanged(evt);
+            }
+        });
         jScrollPane2.setViewportView(jListContatos);
 
         jMenu1.setText("Sistema Mensageiro");
@@ -230,9 +261,40 @@ public class ContatosUI extends javax.swing.JFrame {
 
     private void jButtonIniciarConversaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonIniciarConversaActionPerformed
         // TODO add your handling code here:
-        ConversaUIServidor c = new ConversaUIServidor();
-        c.setVisible(true);
+        int index = jListContatos.getSelectedIndex();
+
+        int size = listModel.getSize();
+
+        if (size == 0) { //Nobody's left, disable firing.
+            jButtonIniciarConversa.setEnabled(false);
+
+        } else { //Select an index.
+            if (index == listModel.getSize()) {
+                ArrayList<Users> list = new ArrayList<Users>();
+                list = core.getList();
+                String ip = list.get(index).ip;
+                if (ip != this.ownInet){
+                    makeConversationRequest(ip, this.secretKey);
+                }else{
+                    //retornar mensagem de erro avisando q está tentando conversas com ele propio
+                }
+            }
+
+            jListContatos.setSelectedIndex(index);
+            jListContatos.ensureIndexIsVisible(index);
+        }
     }//GEN-LAST:event_jButtonIniciarConversaActionPerformed
+
+    private void jListContatosValueChanged(javax.swing.event.ListSelectionEvent evt) {//GEN-FIRST:event_jListContatosValueChanged
+        // TODO add your handling code here:
+        if (evt.getValueIsAdjusting() == false) {
+            if (jListContatos.getSelectedIndex() == -1) {
+                jButtonIniciarConversa.setEnabled(false);
+            } else {
+                jButtonIniciarConversa.setEnabled(true);
+            }
+        }
+    }//GEN-LAST:event_jListContatosValueChanged
 
     /**
      * @param args the command line arguments

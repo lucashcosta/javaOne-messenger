@@ -20,4 +20,9 @@ public class Users {
     public Users(){
         
     }
+    
+    public Users(String nome, String ip){
+        this.nome = nome;
+        this.ip = ip;
+    }
 }
