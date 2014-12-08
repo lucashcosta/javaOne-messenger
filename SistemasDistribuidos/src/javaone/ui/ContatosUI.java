@@ -270,10 +270,10 @@ public class ContatosUI extends javax.swing.JFrame {
 
         } else { //Select an index.
             if (index == listModel.getSize()) {
-                ArrayList<Users> list = new ArrayList<Users>();
+                ArrayList<Users> list;
                 list = core.getList();
                 String ip = list.get(index).ip;
-                if (ip != this.ownInet){
+                if (!ip.equals(this.ownInet)){
                     makeConversationRequest(ip, this.secretKey);
                 }else{
                     //retornar mensagem de erro avisando q está tentando conversas com ele propio
@@ -323,12 +323,14 @@ public class ContatosUI extends javax.swing.JFrame {
         }
         //</editor-fold>
 
+        final ContatosUI app = new ContatosUI();
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new ContatosUI().setVisible(true);
+                app.setVisible(true);
             }
         });
+        app.executeRequestListener();
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
