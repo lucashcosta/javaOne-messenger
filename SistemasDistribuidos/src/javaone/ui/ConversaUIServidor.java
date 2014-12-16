@@ -11,6 +11,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import static java.lang.Thread.MIN_PRIORITY;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.security.InvalidAlgorithmParameterException;
@@ -25,6 +26,7 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import javax.swing.JOptionPane;
 
 /**
  *
@@ -44,28 +46,21 @@ public class ConversaUIServidor extends javax.swing.JFrame {
     public SecretKeySpec sctKeySpec;
     public IvParameterSpec IVSpec;
     public Pkct pkct;
+
     /**
      * Creates new form ConversaUI
      */
-    public ConversaUIServidor() {        
+    public ConversaUIServidor() {
         initComponents();
-        jTextFieldMensagem.addActionListener(
-                new ActionListener() {
-
-                    @Override
-                    public void actionPerformed(ActionEvent e) {
-                        sendData(e.getActionCommand());
-                    }
-                });
     }
-    
+
     public ConversaUIServidor(String srvName, SecretKeySpec sctKeySpc, byte[] iv) {
-        initComponents();
         jLabelNome.setText(srvName);
-        //this.clientName = clntName;
         this.serverName = srvName;
         this.sctKeySpec = sctKeySpc;
         this.IVSpec = new IvParameterSpec(iv);
+        JOptionPane.showMessageDialog(null, "oi", "ERROR", MIN_PRIORITY);
+        executeServer();
     }
 
     /**
@@ -161,7 +156,8 @@ public class ConversaUIServidor extends javax.swing.JFrame {
         jTextFieldMensagem.setText("");
     }//GEN-LAST:event_jButtonEnviarActionPerformed
 
-    public void executeServer() {
+    private void executeServer() {
+        System.out.println("teste");
         try {
             serverSocket = new ServerSocket(5000);
             while (true) {
@@ -177,7 +173,7 @@ public class ConversaUIServidor extends javax.swing.JFrame {
                 do {
                     try {
                         //receivedMessage = (String) in.readObject();
-                        pkct = (Pkct)in.readObject();
+                        pkct = (Pkct) in.readObject();
                         encryptedMessage = pkct.cryp;
                         receivedMessage = decrypt(encryptedMessage, this.sctKeySpec, this.IVSpec);
                         jTextAreaConversa.append(receivedMessage);
@@ -198,7 +194,7 @@ public class ConversaUIServidor extends javax.swing.JFrame {
             jTextAreaConversa.append("\nConexão Perdida");
         }
     }
-    
+
     private void sendData(String s) {
         try {
             byte[] encrypted;
@@ -208,12 +204,12 @@ public class ConversaUIServidor extends javax.swing.JFrame {
             out.writeObject(pk);
             out.flush();
             jTextAreaConversa.append("\n" + this.serverName + ">> " + s);
-        }catch(IOException cnfex){
+        } catch (IOException cnfex) {
             jTextAreaConversa.append("\nErro enviando objeto.");
         }
     }
-    
-    public static byte[] encrypt (String data, SecretKeySpec skeySpec, IvParameterSpec ivspec){
+
+    public static byte[] encrypt(String data, SecretKeySpec skeySpec, IvParameterSpec ivspec) {
         try {
             Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
             cipher.init(Cipher.ENCRYPT_MODE, skeySpec, ivspec);
@@ -225,22 +221,22 @@ public class ConversaUIServidor extends javax.swing.JFrame {
         return null;
     }
 
-    public static String decrypt (byte[] data, SecretKeySpec skeySpec, IvParameterSpec ivspec){
+    public static String decrypt(byte[] data, SecretKeySpec skeySpec, IvParameterSpec ivspec) {
         try {
             Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
             cipher.init(Cipher.DECRYPT_MODE, skeySpec, ivspec);
             byte[] decrypted = cipher.doFinal(data);
-        return new String(decrypted);
+            return new String(decrypted);
         } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException ex) {
             Logger.getLogger(ConversaUIServidor.class.getName()).log(Level.SEVERE, null, ex);
         }
         return null;
     }
-    
+
     /**
      * @param args the command line arguments
      */
-    public static void main(String args[]) {
+    public static void main(String srvName, SecretKeySpec sctKeySpc, byte[] iv) {
         /* Set the Nimbus look and feel */
         //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
         /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
@@ -264,17 +260,24 @@ public class ConversaUIServidor extends javax.swing.JFrame {
         }
         //</editor-fold>
         //</editor-fold>
-        final ConversaUIServidor app = new ConversaUIServidor();
+        //final ConversaUIServidor app = new ConversaUIServidor();
         /* Create and display the form */
+//        java.awt.EventQueue.invokeLater(new Runnable() {
+//            @Override
+//            public void run() {
+//                //ConversaUIServidor app = new ConversaUIServidor();
+//                app.setVisible(true);
+//                //app.executeServer();
+//            }
+//        });
+//        app.executeServer();
         java.awt.EventQueue.invokeLater(new Runnable() {
             @Override
             public void run() {
-                //ConversaUIServidor app = new ConversaUIServidor();
-                app.setVisible(true);
-                //app.executeServer();
+                new ConversaUIServidor().setVisible(true);
             }
         });
-        app.executeServer();
+
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables

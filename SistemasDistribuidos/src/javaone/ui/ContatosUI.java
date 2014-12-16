@@ -40,8 +40,8 @@ public class ContatosUI extends javax.swing.JFrame {
     private String ownInet;
     private Core core;
     private DefaultListModel listModel;
-    public  Pkct pkct;
-    
+    public Pkct pkct;
+
     public ContatosUI() {
         initComponents();
         try {
@@ -49,17 +49,17 @@ public class ContatosUI extends javax.swing.JFrame {
             keyGen.init(128);
             byte[] key = keyGen.generateKey().getEncoded();
             sctKeySpec = new SecretKeySpec(key, "AES");
-            
+
             SecureRandom random = new SecureRandom();
             IV = new byte[16];
             random.nextBytes(IV);
             this.pkct = new Pkct(IV);
-            
+
         } catch (NoSuchAlgorithmException ex) {
             JOptionPane.showMessageDialog(null, "Erro ao criar SCKS", "ERROR", MIN_PRIORITY);
         }
         core = new Core();
-        initiateListOfContacts();  
+        initiateListOfContacts();
         //inicializar ownInet com o ip da máquina
         try {
             this.ownInet = Inet4Address.getLocalHost().getHostAddress();
@@ -71,19 +71,20 @@ public class ContatosUI extends javax.swing.JFrame {
         user.ip = this.ownInet;
         ArrayList<Users> list;
         list = core.getList();
-        for (Users usr : list){
-            if (usr.ip.equals(user.ip))
+        for (Users usr : list) {
+            if (usr.ip.equals(user.ip)) {
                 user.nome = usr.nome;
+            }
         }
         setOwnUser(user);
-        
+
     }
-    
+
     //função que vai inicializar o servidor primario
-    public void executeRequestListener(){ 
+    public void executeRequestListener() {
         try {
             ServerSocket serverSocket = new ServerSocket(6000);
-            while (true){
+            while (true) {
                 Socket clientSocket = serverSocket.accept();
                 ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
                 out.flush();
@@ -92,49 +93,48 @@ public class ContatosUI extends javax.swing.JFrame {
                 Users usr;
                 SecretKeySpec sKeySpec;
                 Pkct pk;
-                try{
+                try {
                     control = (String) in.readObject();
-                    if (control.equals("1")){
+                    if (control.equals("1")) {
                         //abrir conversa
                         out.writeObject("1.1");
                         out.flush();
-                        try{
+                        try {
                             usr = (Users) in.readObject();
                             out.writeObject("1.2");
                             out.flush();
                             try {
-                                sKeySpec = (SecretKeySpec)in.readObject();
+                                sKeySpec = (SecretKeySpec) in.readObject();
                                 out.writeObject("1.3");
                                 out.flush();
-                                try{
-                                    pk = (Pkct)in.readObject();
+                                try {
+                                    pk = (Pkct) in.readObject();
                                     out.writeObject("1.4");
                                     out.flush();
-                                    try{
-                                        ConversaUIServidor c = new ConversaUIServidor(usr.nome, sKeySpec, pk.cryp);
-                                        c.setVisible(true);
+                                    try {
+                                        new ConversaUIServidor(usr.nome, sKeySpec, pk.cryp);
                                         //retornar mensagem de controle confirmando
                                         out.writeObject("1.5");
                                         out.flush();
-                                    }catch(Exception e){
+                                    } catch (Exception e) {
                                         JOptionPane.showMessageDialog(null, "Falha ao abrir a janela de conversa", "ERROR", MIN_PRIORITY);
                                     }
-                                }catch(IOException | ClassNotFoundException | HeadlessException e){
+                                } catch (IOException | ClassNotFoundException | HeadlessException e) {
                                     JOptionPane.showMessageDialog(null, "1.3", "ERROR", MIN_PRIORITY);
                                 }
-                            }catch (IOException | ClassNotFoundException e){
+                            } catch (IOException | ClassNotFoundException e) {
                                 //colocar erro
                                 JOptionPane.showMessageDialog(null, "1.2", "ERROR", MIN_PRIORITY);
                             }
-                        }catch (IOException | ClassNotFoundException e){
+                        } catch (IOException | ClassNotFoundException e) {
                             //colocar erro
                             JOptionPane.showMessageDialog(null, "1.1", "ERROR", MIN_PRIORITY);
                         }
-                    }else{
+                    } else {
                         //retorna erro - talves nem seja necessário
                         JOptionPane.showMessageDialog(null, "mensagem de controle incorreta!", "ERROR", MIN_PRIORITY);
                     }
-                }catch (IOException | ClassNotFoundException e){
+                } catch (IOException | ClassNotFoundException e) {
                     JOptionPane.showMessageDialog(null, "1", "ERROR", MIN_PRIORITY);
                 }
             }
@@ -142,9 +142,9 @@ public class ContatosUI extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(null, "Erro ao iniciar servidor", "ERROR", MIN_PRIORITY);
         }
     }
-    
+
     //funçao que vai receber um ip e realizar um pedido de conversa
-    public void makeConversationRequest(String ip, String name, SecretKeySpec sctKeySpec, Pkct pk){
+    public void makeConversationRequest(String ip, String name, SecretKeySpec sctKeySpec, Pkct pk) {
         try {
             Socket clientSocket = new Socket(InetAddress.getByName(ip), 6000);
             ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
@@ -153,58 +153,59 @@ public class ContatosUI extends javax.swing.JFrame {
             String control;
             out.writeObject("1");
             out.flush();
-            try{
-                control = (String)in.readObject();
-                if (control.equals("1.1")){
+            try {
+                control = (String) in.readObject();
+                if (control.equals("1.1")) {
                     Users u = this.getOwnUser();
                     out.reset();
                     out.writeObject(u);
                     out.flush();
-                    try{
-                        control = (String)in.readObject();
-                        if (control.equals("1.2")){
+                    try {
+                        control = (String) in.readObject();
+                        if (control.equals("1.2")) {
                             out.writeObject(sctKeySpec);
                             out.flush();
-                            try{
-                                control = (String)in.readObject();
-                                if (control.equals("1.3")){
+                            try {
+                                control = (String) in.readObject();
+                                if (control.equals("1.3")) {
                                     out.writeObject(pk);
                                     out.flush();
-                                    try{
-                                        control = (String)in.readObject();
-                                        if (control.equals("1.4")){
-                                            try{
-                                                control = (String)in.readObject();
-                                                if(control.equals("1.5")){
+                                    try {
+                                        control = (String) in.readObject();
+                                        if (control.equals("1.4")) {
+                                            try {
+                                                control = (String) in.readObject();
+                                                if (control.equals("1.5")) {
                                                     //o outro usuario esta pronto, basta iniciar a interface para conversa
-                                                    try{
-                                                        ConversaUICliente c = new ConversaUICliente(this.getOwnUser().nome, name, ip, sctKeySpec, pk.cryp);
-                                                        c.setVisible(true);
+                                                    try {
+
+                                                        new ConversaUICliente(this.getOwnUser().nome, name, ip, sctKeySpec, pk.cryp).setVisible(true);
+                                                        //c.setVisible(true);
                                                         //c.executeClient();
-                                                    }catch(Exception e){
+                                                    } catch (Exception e) {
                                                         JOptionPane.showMessageDialog(null, "Falha ao abrir a janela de conversa", "ERROR", MIN_PRIORITY);
-                                                    }  
+                                                    }
                                                 }
-                                            }catch(IOException | ClassNotFoundException e){
+                                            } catch (IOException | ClassNotFoundException e) {
                                                 //colocar erro
                                                 JOptionPane.showMessageDialog(null, "1.4", "ERROR", MIN_PRIORITY);
                                             }
                                         }
-                                    }catch(IOException | ClassNotFoundException | HeadlessException e){
+                                    } catch (IOException | ClassNotFoundException | HeadlessException e) {
                                         JOptionPane.showMessageDialog(null, "1.3", "ERROR", MIN_PRIORITY);
                                     }
                                 }
-                            }catch(IOException | ClassNotFoundException e){
+                            } catch (IOException | ClassNotFoundException e) {
                                 //colocar erro
                                 JOptionPane.showMessageDialog(null, "1.2", "ERROR", MIN_PRIORITY);
                             }
                         }
-                    }catch(IOException | ClassNotFoundException e){
+                    } catch (IOException | ClassNotFoundException e) {
                         //colocar erro
                         JOptionPane.showMessageDialog(null, "1.1", "ERROR", MIN_PRIORITY);
                     }
                 }
-            }catch(IOException | ClassNotFoundException e){
+            } catch (IOException | ClassNotFoundException e) {
                 //colocar erro
                 JOptionPane.showMessageDialog(null, "1", "ERROR", MIN_PRIORITY);
             }
@@ -214,13 +215,13 @@ public class ContatosUI extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(null, "Erro ao realizar pedido", "ERROR", MIN_PRIORITY);
         }
     }
-    
-    private void initiateListOfContacts(){
+
+    private void initiateListOfContacts() {
         listModel = new DefaultListModel();
         int index = 0;
         ArrayList<Users> list;
         list = core.getList();
-        for (Users usr : list){
+        for (Users usr : list) {
             listModel.add(index, usr.nome);
             index++;
         }
@@ -321,9 +322,9 @@ public class ContatosUI extends javax.swing.JFrame {
         list = core.getList();
         String ip = list.get(index).ip;
         String name = list.get(index).nome;
-        if (!ip.equals(this.ownInet)){
+        if (!ip.equals(this.ownInet)) {
             makeConversationRequest(ip, name, this.sctKeySpec, this.pkct);
-        }else{
+        } else {
             //retornar mensagem de erro avisando q está tentando conversas com ele propio
             JOptionPane.showMessageDialog(null, "Voce não pode iniciar uma conversa com voce mesmo", "WARNING", MIN_PRIORITY);
         }
@@ -397,12 +398,12 @@ public class ContatosUI extends javax.swing.JFrame {
     public Users getOwnUser() {
         return this.ownUser;
     }
-    
-    private void setOwnUser(Users usr){
+
+    private void setOwnUser(Users usr) {
         this.ownUser = usr;
     }
-    
-    public void testaUser(){
+
+    public void testaUser() {
         Users user;
         user = this.getOwnUser();
         JOptionPane.showMessageDialog(null, user.nome, "System", MIN_PRIORITY);
