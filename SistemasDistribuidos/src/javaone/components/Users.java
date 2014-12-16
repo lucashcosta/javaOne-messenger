@@ -5,11 +5,13 @@
  */
 package javaone.components;
 
+import java.io.Serializable;
+
 /**
  *
  * @author EvandroFBL
  */
-public class Users {
+public class Users implements Serializable {
     
     public int id;
     public String nome;

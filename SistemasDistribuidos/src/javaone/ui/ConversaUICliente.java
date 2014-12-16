@@ -11,6 +11,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import static java.lang.Thread.MIN_PRIORITY;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.security.InvalidAlgorithmParameterException;
@@ -23,6 +24,7 @@ import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
+import javax.swing.JOptionPane;
 import sun.misc.BASE64Decoder;
 import sun.misc.BASE64Encoder;
 
@@ -38,8 +40,8 @@ public class ConversaUICliente extends javax.swing.JFrame {
     public Socket clientSocket;
     public ObjectOutputStream out;
     public ObjectInputStream in;
-    public String serverName = "Joao";
-    public String clientName = "Maria";
+    public String serverName = "";
+    public String clientName = "";
     public SecretKey secretkey;
     /**
      * Creates new form ConversaUI
@@ -189,7 +191,10 @@ public class ConversaUICliente extends javax.swing.JFrame {
     private void sendData(String s) {
         try {
             this.receivedMessage = s;
-            out.writeObject("\n" + this.clientName + ">> " + s);
+            String encrypted;
+            encrypted = encrypt("\n" + this.clientName + ">> " + s, this.secretkey);
+            JOptionPane.showMessageDialog(null, encrypted, "ERROR", MIN_PRIORITY);
+            out.writeObject(encrypted);
             out.flush();
             jTextAreaConversa.append("\n" + this.clientName + ">> " + s);
         }catch(IOException cnfex){

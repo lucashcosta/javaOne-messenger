@@ -197,7 +197,9 @@ public class ConversaUIServidor extends javax.swing.JFrame {
     
     private void sendData(String s) {
         try {
-            out.writeObject("\n" + this.serverName + ">> " + s);
+            String encrypted;
+            encrypted = encrypt("\n" + this.clientName + ">> " + s, this.secretkey);
+            out.writeObject(encrypted);
             out.flush();
             jTextAreaConversa.append("\n" + this.serverName + ">> " + s);
         }catch(IOException cnfex){
