@@ -160,7 +160,7 @@ public class ConversaUIServidor extends javax.swing.JFrame {
 
     private void executeServer() {
         try {
-            serverSocket = new ServerSocket(5000, 100);
+            serverSocket = new ServerSocket(5000);
             while (true) {
                 jTextAreaConversa.append("Aguardando conexão!\n");
                 clientSocket = serverSocket.accept();

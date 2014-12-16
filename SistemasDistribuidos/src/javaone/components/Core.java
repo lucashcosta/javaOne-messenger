@@ -5,7 +5,6 @@
  */
 package javaone.components;
 
-import java.awt.List;
 import java.util.ArrayList;
 
 /**
@@ -21,12 +20,14 @@ import java.util.ArrayList;
 */
 public class Core {
    
-    private ArrayList<Users> online;
+    private final ArrayList<Users> online;
     
     public Core(){
-        online = new ArrayList<Users>();
+        online = new ArrayList<>();
         online.add(new Users("João", "192.168.0.100"));
         online.add(new Users("Maria", "192.168.0.107"));
+        online.add(new Users("Igor", "192.168.0.103"));
+        online.add(new Users("Ian", "192.168.0.101"));
     }
     
     public ArrayList getList(){
