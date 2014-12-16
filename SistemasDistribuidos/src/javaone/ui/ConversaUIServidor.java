@@ -18,13 +18,13 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javaone.components.Pkct;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
-import sun.misc.BASE64Decoder;
-import sun.misc.BASE64Encoder;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 
 /**
  *
@@ -34,14 +34,16 @@ public class ConversaUIServidor extends javax.swing.JFrame {
 
     public String message;
     public String receivedMessage;
-    public String encryptedMessage;
+    public byte[] encryptedMessage;
     public ServerSocket serverSocket;
     public Socket clientSocket;
     public ObjectOutputStream out = null;
     public ObjectInputStream in = null;
-    public String serverName = "Joao";
-    public String clientName = "Maria";
-    public SecretKey secretkey;
+    public String serverName = "";
+    public String clientName = "";
+    public SecretKeySpec sctKeySpec;
+    public IvParameterSpec IVSpec;
+    public Pkct pkct;
     /**
      * Creates new form ConversaUI
      */
@@ -55,14 +57,15 @@ public class ConversaUIServidor extends javax.swing.JFrame {
                         sendData(e.getActionCommand());
                     }
                 });
-        //executaServidor();
     }
     
-    public ConversaUIServidor(String name, SecretKey sctKey) {
+    public ConversaUIServidor(String srvName, SecretKeySpec sctKeySpc, byte[] iv) {
         initComponents();
-        jLabelNome.setText(name);
-        this.clientName = name;
-        this.secretkey = sctKey;
+        jLabelNome.setText(srvName);
+        //this.clientName = clntName;
+        this.serverName = srvName;
+        this.sctKeySpec = sctKeySpc;
+        this.IVSpec = new IvParameterSpec(iv);
     }
 
     /**
@@ -158,7 +161,7 @@ public class ConversaUIServidor extends javax.swing.JFrame {
         jTextFieldMensagem.setText("");
     }//GEN-LAST:event_jButtonEnviarActionPerformed
 
-    private void executeServer() {
+    public void executeServer() {
         try {
             serverSocket = new ServerSocket(5000);
             while (true) {
@@ -174,8 +177,9 @@ public class ConversaUIServidor extends javax.swing.JFrame {
                 do {
                     try {
                         //receivedMessage = (String) in.readObject();
-                        encryptedMessage = (String) in.readObject();
-                        receivedMessage = decrypt(encryptedMessage, this.secretkey);
+                        pkct = (Pkct)in.readObject();
+                        encryptedMessage = pkct.cryp;
+                        receivedMessage = decrypt(encryptedMessage, this.sctKeySpec, this.IVSpec);
                         jTextAreaConversa.append(receivedMessage);
                         jTextAreaConversa.setCaretPosition(jTextAreaConversa.getText().length());
                     } catch (ClassNotFoundException cnfex) {
@@ -197,9 +201,11 @@ public class ConversaUIServidor extends javax.swing.JFrame {
     
     private void sendData(String s) {
         try {
-            String encrypted;
-            encrypted = encrypt("\n" + this.clientName + ">> " + s, this.secretkey);
-            out.writeObject(encrypted);
+            byte[] encrypted;
+            Pkct pk;
+            encrypted = encrypt("\n" + this.serverName + ">> " + s, this.sctKeySpec, this.IVSpec);
+            pk = new Pkct(encrypted);
+            out.writeObject(pk);
             out.flush();
             jTextAreaConversa.append("\n" + this.serverName + ">> " + s);
         }catch(IOException cnfex){
@@ -207,71 +213,27 @@ public class ConversaUIServidor extends javax.swing.JFrame {
         }
     }
     
-    private String encrypt(String data, SecretKey secretKey){
-	try{		
-            Cipher desCipher = Cipher.getInstance("SistemasDistribuidos/CBC/PKCS5Padding"); /* Must specify the mode explicitly as most JCE providers default to ECB mode!! */
-            desCipher.init(Cipher.ENCRYPT_MODE,secretKey);
-
-            //Encrypt Data
-            byte[] byteDataToEncrypt = data.getBytes();
-            byte[] byteCipherText = desCipher.doFinal(byteDataToEncrypt); 
-            String strCipherText = new BASE64Encoder().encode(byteCipherText);
-            return strCipherText;
-        }catch (NoSuchAlgorithmException noSuchAlgo){
-            System.out.println(" No Such Algorithm exists " + noSuchAlgo);
+    public static byte[] encrypt (String data, SecretKeySpec skeySpec, IvParameterSpec ivspec){
+        try {
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            cipher.init(Cipher.ENCRYPT_MODE, skeySpec, ivspec);
+            byte[] encrypted = cipher.doFinal(data.getBytes());
+            return encrypted;
+        } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException ex) {
+            Logger.getLogger(ConversaUIServidor.class.getName()).log(Level.SEVERE, null, ex);
         }
-            catch (NoSuchPaddingException noSuchPad){
-            System.out.println(" No Such Padding exists " + noSuchPad);
-        }
-            catch (InvalidKeyException invalidKey){
-                System.out.println(" Invalid Key " + invalidKey);
-            }
-
-            catch (BadPaddingException badPadding){
-                System.out.println(" Bad Padding " + badPadding);
-            }
-
-            catch (IllegalBlockSizeException illegalBlockSize){
-                System.out.println(" Illegal Block Size " + illegalBlockSize);
-            }
         return null;
     }
 
-    private String decrypt(String data, SecretKey secretKey){
-	try{		
-		Cipher desCipher = Cipher.getInstance("DES/CBC/PKCS5Padding"); /* Must specify the mode explicitly as most JCE providers default to ECB mode!! */		
-		desCipher.init(Cipher.DECRYPT_MODE,secretKey,desCipher.getParameters());
-		//desCipher.init(Cipher.DECRYPT_MODE,secretKey);
-
-		//Decrypt Data
-                byte[] byteCipherText = new BASE64Decoder().decodeBuffer(data);
-		byte[] byteDecryptedText = desCipher.doFinal(byteCipherText);
-		String strDecryptedText = new String(byteDecryptedText);
-		return strDecryptedText;
-        }catch (NoSuchAlgorithmException noSuchAlgo){
-                System.out.println(" No Such Algorithm exists " + noSuchAlgo);
+    public static String decrypt (byte[] data, SecretKeySpec skeySpec, IvParameterSpec ivspec){
+        try {
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            cipher.init(Cipher.DECRYPT_MODE, skeySpec, ivspec);
+            byte[] decrypted = cipher.doFinal(data);
+        return new String(decrypted);
+        } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException ex) {
+            Logger.getLogger(ConversaUIServidor.class.getName()).log(Level.SEVERE, null, ex);
         }
-            catch (NoSuchPaddingException noSuchPad){
-                System.out.println(" No Such Padding exists " + noSuchPad);
-            }
-
-                catch (InvalidKeyException invalidKey){
-                    System.out.println(" Invalid Key " + invalidKey);
-                }
-
-                catch (BadPaddingException badPadding){
-                    System.out.println(" Bad Padding " + badPadding);
-                }
-
-                catch (IllegalBlockSizeException illegalBlockSize){
-                    System.out.println(" Illegal Block Size " + illegalBlockSize);
-                }
-
-                catch (InvalidAlgorithmParameterException invalidParam){
-                    System.out.println(" Invalid Parameter " + invalidParam);
-                } catch (IOException ex) {
-                    Logger.getLogger(ConversaUIServidor.class.getName()).log(Level.SEVERE, null, ex);
-                }
         return null;
     }
     

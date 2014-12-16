@@ -20,8 +20,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import javax.crypto.KeyGenerator;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import javax.swing.DefaultListModel;
 import javax.swing.JOptionPane;
@@ -36,12 +34,13 @@ public class ContatosUI extends javax.swing.JFrame {
      * Creates new form ContatosUI
      */
     private SecretKeySpec sctKeySpec;
-    private IvParameterSpec IVSpec;
+    private byte[] IV;
     private KeyGenerator keyGen;
     private Users ownUser;
     private String ownInet;
     private Core core;
     private DefaultListModel listModel;
+    public  Pkct pkct;
     
     public ContatosUI() {
         initComponents();
@@ -52,9 +51,9 @@ public class ContatosUI extends javax.swing.JFrame {
             sctKeySpec = new SecretKeySpec(key, "AES");
             
             SecureRandom random = new SecureRandom();
-            byte iv[] = new byte[16];
-            random.nextBytes(iv);
-            IVSpec = new IvParameterSpec(iv);
+            IV = new byte[16];
+            random.nextBytes(IV);
+            this.pkct = new Pkct(IV);
             
         } catch (NoSuchAlgorithmException ex) {
             JOptionPane.showMessageDialog(null, "Erro ao criar SCKS", "ERROR", MIN_PRIORITY);
@@ -92,7 +91,7 @@ public class ContatosUI extends javax.swing.JFrame {
                 String control;
                 Users usr;
                 SecretKeySpec sKeySpec;
-                IvParameterSpec ivSpec;
+                Pkct pk;
                 try{
                     control = (String) in.readObject();
                     if (control.equals("1")){
@@ -104,15 +103,15 @@ public class ContatosUI extends javax.swing.JFrame {
                             out.writeObject("1.2");
                             out.flush();
                             try {
-                                sKeySpec = (SecretKeySpec) in.readObject();
+                                sKeySpec = (SecretKeySpec)in.readObject();
                                 out.writeObject("1.3");
                                 out.flush();
                                 try{
-                                    ivSpec = (IvParameterSpec) in.readObject();
+                                    pk = (Pkct)in.readObject();
                                     out.writeObject("1.4");
                                     out.flush();
                                     try{
-                                        ConversaUIServidor c = new ConversaUIServidor(usr.nome, sKeySpec, ivSpec);
+                                        ConversaUIServidor c = new ConversaUIServidor(usr.nome, sKeySpec, pk.cryp);
                                         c.setVisible(true);
                                         //retornar mensagem de controle confirmando
                                         out.writeObject("1.5");
@@ -145,7 +144,7 @@ public class ContatosUI extends javax.swing.JFrame {
     }
     
     //funçao que vai receber um ip e realizar um pedido de conversa
-    public void makeConversationRequest(String ip, SecretKeySpec sctKeySpec, IvParameterSpec ivSpec){
+    public void makeConversationRequest(String ip, String name, SecretKeySpec sctKeySpec, Pkct pk){
         try {
             Socket clientSocket = new Socket(InetAddress.getByName(ip), 6000);
             ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
@@ -169,7 +168,7 @@ public class ContatosUI extends javax.swing.JFrame {
                             try{
                                 control = (String)in.readObject();
                                 if (control.equals("1.3")){
-                                    out.writeObject(ivSpec);
+                                    out.writeObject(pk);
                                     out.flush();
                                     try{
                                         control = (String)in.readObject();
@@ -179,15 +178,16 @@ public class ContatosUI extends javax.swing.JFrame {
                                                 if(control.equals("1.5")){
                                                     //o outro usuario esta pronto, basta iniciar a interface para conversa
                                                     try{
-                                                        ConversaUICliente c = new ConversaUICliente(this.getOwnUser().nome, sctKeySpec, ivSpec);
+                                                        ConversaUICliente c = new ConversaUICliente(this.getOwnUser().nome, name, ip, sctKeySpec, pk.cryp);
                                                         c.setVisible(true);
+                                                        //c.executeClient();
                                                     }catch(Exception e){
                                                         JOptionPane.showMessageDialog(null, "Falha ao abrir a janela de conversa", "ERROR", MIN_PRIORITY);
                                                     }  
                                                 }
                                             }catch(IOException | ClassNotFoundException e){
                                                 //colocar erro
-                                                JOptionPane.showMessageDialog(null, "1.3", "ERROR", MIN_PRIORITY);
+                                                JOptionPane.showMessageDialog(null, "1.4", "ERROR", MIN_PRIORITY);
                                             }
                                         }
                                     }catch(IOException | ClassNotFoundException | HeadlessException e){
@@ -247,7 +247,7 @@ public class ContatosUI extends javax.swing.JFrame {
         jMenu1 = new javax.swing.JMenu();
         jMenu2 = new javax.swing.JMenu();
 
-        setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
+        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
         jLabelContatosDisponiveis.setFont(new java.awt.Font("Tahoma", 0, 18)); // NOI18N
         jLabelContatosDisponiveis.setText("Contatos Disponíveis");
@@ -320,8 +320,9 @@ public class ContatosUI extends javax.swing.JFrame {
         ArrayList<Users> list;
         list = core.getList();
         String ip = list.get(index).ip;
+        String name = list.get(index).nome;
         if (!ip.equals(this.ownInet)){
-            makeConversationRequest(ip, this.sctKeySpec, this.IVSpec);
+            makeConversationRequest(ip, name, this.sctKeySpec, this.pkct);
         }else{
             //retornar mensagem de erro avisando q está tentando conversas com ele propio
             JOptionPane.showMessageDialog(null, "Voce não pode iniciar uma conversa com voce mesmo", "WARNING", MIN_PRIORITY);

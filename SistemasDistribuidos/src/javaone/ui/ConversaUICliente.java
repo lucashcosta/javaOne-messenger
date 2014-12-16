@@ -19,14 +19,14 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javaone.components.Pkct;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+import javax.crypto.spec.IvParameterSpec;
 import javax.swing.JOptionPane;
-import sun.misc.BASE64Decoder;
-import sun.misc.BASE64Encoder;
 
 /**
  *
@@ -35,14 +35,15 @@ import sun.misc.BASE64Encoder;
 public class ConversaUICliente extends javax.swing.JFrame {
 
     public String receivedMessage;
-    public String encryptedMessage;
-    //public ServerSocket serverSocket;
+    public byte[] encryptedMessage;
     public Socket clientSocket;
     public ObjectOutputStream out;
     public ObjectInputStream in;
     public String serverName = "";
     public String clientName = "";
-    public SecretKey secretkey;
+    public String serverIp;
+    public SecretKeySpec sctKeySpec;
+    public IvParameterSpec IVSpec;
     /**
      * Creates new form ConversaUI
      */
@@ -58,11 +59,14 @@ public class ConversaUICliente extends javax.swing.JFrame {
                 });
     }
     
-    public ConversaUICliente(String name, SecretKey sctKey) {
+    public ConversaUICliente(String clntName, String srvName, String ip, SecretKeySpec sctKey, byte[] iv) {
         initComponents();
-        jLabelNome.setText(name);
-        this.serverName = name;
-        this.secretkey = sctKey;
+        jLabelNome.setText(srvName);
+        //this.serverName = srvName;
+        this.clientName = clntName;
+        this.sctKeySpec = sctKey;
+        this.IVSpec = new IvParameterSpec(iv);
+        this.serverIp = ip;
     }
 
     /**
@@ -169,8 +173,9 @@ public class ConversaUICliente extends javax.swing.JFrame {
             out.flush();
             do {
                 try {
-                    encryptedMessage = (String) in.readObject();
-                    receivedMessage = decrypt(encryptedMessage, this.secretkey);
+                    Pkct pkt = (Pkct)in.readObject();
+                    encryptedMessage = pkt.cryp;
+                    receivedMessage = decrypt(encryptedMessage, this.sctKeySpec, this.IVSpec);
                     jTextAreaConversa.append(receivedMessage);
                     jTextAreaConversa.setCaretPosition(jTextAreaConversa.getText().length());
                 } catch (ClassNotFoundException cnfex) {
@@ -190,11 +195,13 @@ public class ConversaUICliente extends javax.swing.JFrame {
     
     private void sendData(String s) {
         try {
-            this.receivedMessage = s;
-            String encrypted;
-            encrypted = encrypt("\n" + this.clientName + ">> " + s, this.secretkey);
-            JOptionPane.showMessageDialog(null, encrypted, "ERROR", MIN_PRIORITY);
-            out.writeObject(encrypted);
+            //this.receivedMessage = s;
+            byte[] encrypted;
+            Pkct pk;
+            encrypted = encrypt("\n" + this.clientName + ">> " + s, this.sctKeySpec, this.IVSpec);
+            pk = new Pkct(encrypted);
+            JOptionPane.showMessageDialog(null, asHex(encrypted), "ERROR", MIN_PRIORITY);
+            out.writeObject(pk);
             out.flush();
             jTextAreaConversa.append("\n" + this.clientName + ">> " + s);
         }catch(IOException cnfex){
@@ -202,72 +209,40 @@ public class ConversaUICliente extends javax.swing.JFrame {
         }
     }
     
-    private String encrypt(String data, SecretKey secretKey){
-	try{		
-            Cipher desCipher = Cipher.getInstance("SistemasDistribuidos/CBC/PKCS5Padding"); /* Must specify the mode explicitly as most JCE providers default to ECB mode!! */
-            desCipher.init(Cipher.ENCRYPT_MODE,secretKey);
-
-            //Encrypt Data
-            byte[] byteDataToEncrypt = data.getBytes();
-            byte[] byteCipherText = desCipher.doFinal(byteDataToEncrypt); 
-            String strCipherText = new BASE64Encoder().encode(byteCipherText);
-            return strCipherText;
-        }catch (NoSuchAlgorithmException noSuchAlgo){
-            System.out.println(" No Such Algorithm exists " + noSuchAlgo);
+    public static byte[] encrypt (String data, SecretKeySpec skeySpec, IvParameterSpec ivspec){
+        try {
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            cipher.init(Cipher.ENCRYPT_MODE, skeySpec, ivspec);
+            byte[] encrypted = cipher.doFinal(data.getBytes());
+            return encrypted;
+        } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException ex) {
+            Logger.getLogger(ConversaUICliente.class.getName()).log(Level.SEVERE, null, ex);
         }
-            catch (NoSuchPaddingException noSuchPad){
-            System.out.println(" No Such Padding exists " + noSuchPad);
-        }
-            catch (InvalidKeyException invalidKey){
-                System.out.println(" Invalid Key " + invalidKey);
-            }
-
-            catch (BadPaddingException badPadding){
-                System.out.println(" Bad Padding " + badPadding);
-            }
-
-            catch (IllegalBlockSizeException illegalBlockSize){
-                System.out.println(" Illegal Block Size " + illegalBlockSize);
-            }
         return null;
     }
 
-    private String decrypt(String data, SecretKey secretKey){
-	try{		
-		Cipher desCipher = Cipher.getInstance("DES/CBC/PKCS5Padding"); /* Must specify the mode explicitly as most JCE providers default to ECB mode!! */		
-		desCipher.init(Cipher.DECRYPT_MODE,secretKey,desCipher.getParameters());
-		//desCipher.init(Cipher.DECRYPT_MODE,secretKey);
-
-		//Decrypt Data
-                byte[] byteCipherText = new BASE64Decoder().decodeBuffer(data);
-		byte[] byteDecryptedText = desCipher.doFinal(byteCipherText);
-		String strDecryptedText = new String(byteDecryptedText);
-		return strDecryptedText;
-        }catch (NoSuchAlgorithmException noSuchAlgo){
-                System.out.println(" No Such Algorithm exists " + noSuchAlgo);
+    public static String decrypt (byte[] data, SecretKeySpec skeySpec, IvParameterSpec ivspec){
+        try {
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            cipher.init(Cipher.DECRYPT_MODE, skeySpec, ivspec);
+            byte[] decrypted = cipher.doFinal(data);
+        return new String(decrypted);
+        } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException ex) {
+            Logger.getLogger(ConversaUICliente.class.getName()).log(Level.SEVERE, null, ex);
         }
-            catch (NoSuchPaddingException noSuchPad){
-                System.out.println(" No Such Padding exists " + noSuchPad);
-            }
-
-                catch (InvalidKeyException invalidKey){
-                    System.out.println(" Invalid Key " + invalidKey);
-                }
-
-                catch (BadPaddingException badPadding){
-                    System.out.println(" Bad Padding " + badPadding);
-                }
-
-                catch (IllegalBlockSizeException illegalBlockSize){
-                    System.out.println(" Illegal Block Size " + illegalBlockSize);
-                }
-
-                catch (InvalidAlgorithmParameterException invalidParam){
-                    System.out.println(" Invalid Parameter " + invalidParam);
-                } catch (IOException ex) {
-                    Logger.getLogger(ConversaUIServidor.class.getName()).log(Level.SEVERE, null, ex);
-                }
         return null;
+    }
+    
+    public static String asHex(byte buf[]) {
+        StringBuilder strbuf = new StringBuilder(buf.length * 2);
+        int i;
+        for (i = 0; i < buf.length; i++) {
+            if (((int) buf[i] & 0xff) < 0x10) {
+                strbuf.append("0");
+            }
+            strbuf.append(Long.toString((int) buf[i] & 0xff, 16));
+        }
+        return strbuf.toString();
     }
     
     /**
@@ -281,7 +256,7 @@ public class ConversaUICliente extends javax.swing.JFrame {
          */
         try {
             for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
+                if ("Windows".equals(info.getName())) {
                     javax.swing.UIManager.setLookAndFeel(info.getClassName());
                     break;
                 }
